@@ -51,13 +51,15 @@
   }
   #overlay.hide { opacity: 0; pointer-events: none; }
   .card {
-    text-align: center; color: #f8eae0; max-width: 640px; padding: 42px 48px;
+    text-align: center; color: #f8eae0; max-width: 640px; padding: 58px 48px 48px;
     border: 1px solid rgba(220,90,100,.4); border-radius: 18px;
     background: linear-gradient(180deg, rgba(52,18,24,.78), rgba(20,8,12,.82));
     box-shadow: 0 0 90px rgba(200,50,70,.25);
   }
   .card h1 {
-    font-family: var(--f-name); font-size: 64px; line-height: 1.15; letter-spacing: .01em; font-weight: 400; margin-bottom: 6px;
+    font-family: var(--f-name); font-size: 64px; line-height: 1.7; letter-spacing: .01em; font-weight: 400; margin: -.15em 0 0;
+    padding: .12em .3em .22em; /* script flourishes reach outside the line box; the gradient only paints inside it */
+    overflow: visible;
     background: linear-gradient(180deg,#ffe0c0,#e06060);
     -webkit-background-clip: text; background-clip: text; color: transparent;
   }
@@ -98,8 +100,8 @@
   html.is-touch .mobile-only { display: block; }
   html.is-touch #crosshair { display: none; }
   html.is-touch #overlay { overflow-y: auto; -webkit-overflow-scrolling: touch; align-items: safe center; padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); }
-  html.is-touch .card { width: 100%; max-width: 440px; padding: 26px 22px; border-radius: 16px; }
-  html.is-touch .card h1 { font-size: clamp(40px, 13vw, 56px); letter-spacing: .01em; }
+  html.is-touch .card { width: 100%; max-width: 440px; padding: 40px 22px 28px; border-radius: 16px; }
+  html.is-touch .card h1 { font-size: clamp(40px, 13vw, 56px); letter-spacing: .01em; line-height: 1.7; }
   html.is-touch .card .sub { font-size: 13px; letter-spacing: 3px; margin-bottom: 12px; }
   html.is-touch .card p { font-size: 17px; line-height: 1.45; margin: 10px 0; }
   html.is-touch .card .tips { font-size: 16px; color: #d9b8aa; }
@@ -149,7 +151,8 @@
     #stickKnob { width: 48px; height: 48px; margin: -24px 0 0 -24px; }
     #btnAct { width: 62px; height: 62px; bottom: max(16px, env(safe-area-inset-bottom)); }
     #btnRun { bottom: max(22px, env(safe-area-inset-bottom)); height: 48px; min-width: 52px; }
-    html.is-touch .card { padding: 14px 18px; }
+    html.is-touch .card { padding: 22px 18px 14px; }
+    html.is-touch .card h1 { font-size: 40px; line-height: 1.6; }
     html.is-touch .card p { margin: 6px 0; }
     html.is-touch .enter { margin-top: 10px; padding: 10px; }
   }
