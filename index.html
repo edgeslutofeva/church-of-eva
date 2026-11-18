@@ -720,9 +720,10 @@ try {
 
   // Name plaque
   const plaqueC = document.createElement('canvas');
-  plaqueC.width = 1024; plaqueC.height = 256;
+  plaqueC.width = 2048; plaqueC.height = 512;   // 2x resolution so the big sign stays sharp
   const pctx = plaqueC.getContext('2d');
   function drawNamePlaque() {
+    pctx.setTransform(2, 0, 0, 2, 0, 0);   // draw in 1024x256 units
     pctx.fillStyle = '#1a0c10';
     pctx.fillRect(0, 0, 1024, 256);
     pctx.strokeStyle = '#e0b84a';
@@ -744,10 +745,11 @@ try {
   plaqueTex.colorSpace = THREE.SRGBColorSpace;
   fontRedraws.push(() => { drawNamePlaque(); plaqueTex.needsUpdate = true; });
   const plaque = new THREE.Mesh(
-    new THREE.PlaneGeometry(9.2, 1.15),
-    new THREE.MeshStandardMaterial({ map: plaqueTex, roughness: 0.35, metalness: 0.25, emissive: 0x000000, emissiveIntensity: 0 })
+    new THREE.PlaneGeometry(21.6, 5.4),   // was 9.2 x 1.15: now fills the wall above the big frame
+    // Self-lit (emissive) so the name reads from every corner of the hall, not only under the spotlights
+    new THREE.MeshStandardMaterial({ map: plaqueTex, roughness: 0.5, metalness: 0.1, emissive: 0xffffff, emissiveMap: plaqueTex, emissiveIntensity: 0.85 })
   );
-  plaque.position.set(0, 12.72, FRONT_Z + 1.38);
+  plaque.position.set(0, 15.1, FRONT_Z + 1.38);
   scene.add(plaque);
 
   // Pews
