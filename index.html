@@ -292,7 +292,7 @@ try {
   scene.background = new THREE.Color(0x241018);
   scene.fog = new THREE.FogExp2(0x2a141c, 0.0075);
 
-  const camera = new THREE.PerspectiveCamera(68, innerWidth / innerHeight, 0.1, 400);
+  const camera = new THREE.PerspectiveCamera(68, innerWidth / innerHeight, 0.2, 300);
   scene.add(camera);
 
   // ——— dimensions ———
@@ -984,7 +984,7 @@ try {
   // black exterior from being visible through their joins.
   const foundationFloor = new THREE.Mesh(new THREE.CircleGeometry(ROOM_FAR + 1, 96), ugFloorMat);
   foundationFloor.rotation.x = -Math.PI / 2;
-  foundationFloor.position.y = UG_Y + 0.02;
+  foundationFloor.position.y = UG_Y - 0.15;   // backing disc sits well below the real floors (it used to be coplanar with them = flicker)
   hub.add(foundationFloor);
   // Ceiling disc with a hole for the stair column, so it doesn't slice through the stairwell
   const ceilShape = new THREE.Shape();
@@ -996,7 +996,7 @@ try {
   ceilShape.holes.push(ceilHole);
   const foundationCeiling = new THREE.Mesh(new THREE.ShapeGeometry(ceilShape, 96), ugCeilMat);
   foundationCeiling.rotation.x = Math.PI / 2;
-  foundationCeiling.position.y = UG_Y + UG_CEIL - 0.02;
+  foundationCeiling.position.y = UG_Y + UG_CEIL + 0.15;
   hub.add(foundationCeiling);
   const outerShell = new THREE.Mesh(
     new THREE.CylinderGeometry(ROOM_FAR + 1, ROOM_FAR + 1, UG_CEIL, 96, 1, true), ugWallMat
@@ -1228,7 +1228,7 @@ try {
     const corridorCenter = (corridorStart + ROOM_NEAR) / 2;
     const cFloor = new THREE.Mesh(new THREE.PlaneGeometry(CORRIDOR_HALF * 2, corridorSpan), ugFloorMat);
     cFloor.rotation.x = -Math.PI / 2;
-    cFloor.position.set(0, 0.02, corridorCenter);
+    cFloor.position.set(0, 0.05, corridorCenter);
     room.add(cFloor);
     const cCeil = new THREE.Mesh(new THREE.PlaneGeometry(CORRIDOR_HALF * 2, corridorSpan), ugCeilMat);
     cCeil.rotation.x = Math.PI / 2;
@@ -1250,7 +1250,7 @@ try {
     const rc = ROOM_NEAR + ROOM_HALF;
     const rFloor = new THREE.Mesh(new THREE.PlaneGeometry(ROOM_HALF * 2, ROOM_HALF * 2), ugFloorMat);
     rFloor.rotation.x = -Math.PI / 2;
-    rFloor.position.set(0, 0.02, rc);
+    rFloor.position.set(0, 0.05, rc);
     room.add(rFloor);
     const rCeil = new THREE.Mesh(new THREE.PlaneGeometry(ROOM_HALF * 2, ROOM_HALF * 2), ugCeilMat);
     rCeil.rotation.x = Math.PI / 2;
