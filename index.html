@@ -1637,6 +1637,15 @@ try {
   let sitYaw = 0;
   let sitPitch = 0;
 
+  // The on-screen controls reminder (desktop) fades away 30 s after you start, and reappears if you pause and resume.
+  let hintTimer = null, hintDone = false;
+  function showHint() {
+    if (hintDone) return;                       // already shown once this visit: don't pop it up again after sitting/standing
+    hint.classList.add('show');
+    clearTimeout(hintTimer);
+    hintTimer = setTimeout(() => { hint.classList.remove('show'); hintDone = true; }, 30000);
+  }
+
   function beginVisit() {
     if (sitting) return;
     entered = true;
@@ -1644,7 +1653,7 @@ try {
     escapePresses = 0;
     overlay.classList.add('hide');
     crosshair.classList.add('on');
-    hint.classList.add('show');
+    showHint();
     setChurchVideosPlaying(true);
     if (IS_TOUCH) {
       document.documentElement.classList.add('in-game');
@@ -1661,7 +1670,7 @@ try {
   controls.addEventListener('lock', () => {
     overlay.classList.add('hide');
     crosshair.classList.add('on');
-    hint.classList.add('show');
+    showHint();
   });
   controls.addEventListener('unlock', () => {
     if (sitting) return;
@@ -1691,7 +1700,7 @@ try {
         navigationActive = false;
         entered = false;
         crosshair.classList.remove('on');
-        hint.classList.remove('show');
+        hint.classList.remove('show'); clearTimeout(hintTimer); hintDone = false;   // paused: show it again next time
         overlay.classList.remove('hide');
         escapePresses = 0;
         return;
