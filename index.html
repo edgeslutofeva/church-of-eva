@@ -836,6 +836,9 @@ try {
   const petalGeo = (() => { const g = new THREE.SphereGeometry(1, 6, 4); g.scale(0.05, 0.013, 0.24); g.translate(0, 0, 0.2); return g; })();
   const leafGeo = (() => { const g = new THREE.SphereGeometry(1, 6, 4); g.scale(0.085, 0.012, 0.15); g.translate(0, 0, 0.1); return g; })();
   const dotGeo = new THREE.SphereGeometry(0.03, 5, 4);
+  const tulipGeo = (() => { const g = new THREE.SphereGeometry(1, 6, 5); g.scale(0.055, 0.14, 0.04); g.translate(0, 0.12, 0.035); return g; })();   // one cupped tulip petal
+  const daisyGeo = (() => { const g = new THREE.SphereGeometry(1, 5, 3); g.scale(0.014, 0.004, 0.06); g.translate(0, 0, 0.055); return g; })();    // one thin daisy petal
+  const TULIP_COLORS = [0xe58fa5, 0xf0cf6a, 0xf6e9d8, 0xe0674f, 0xc9507a];
   const stemGeo = new THREE.CylinderGeometry(1, 1, 1, 5);
   const stemMat = new THREE.MeshStandardMaterial({ color: 0x3f5a36, roughness: 0.85 });
   const bloomMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.55, side: THREE.DoubleSide });
@@ -859,12 +862,15 @@ try {
     g.add(vase);
     const mouthY = 1.08 * sc;
     const rnd = (() => { let t = (Math.round(x * 100) + 7919 * Math.round(z * 100)) >>> 0; return () => ((t = (t * 1664525 + 1013904223) >>> 0) / 4294967296); })();
-    const nHeads = (big ? 13 : 8) - (IS_TOUCH ? 3 : 0);
-    const stems = makeInstanced(stemGeo, stemMat, 80);
+    const nHeads = (big ? 46 : 22) - (IS_TOUCH ? 14 : 0);   // many more flowers than before
+    const stems = makeInstanced(stemGeo, stemMat, 160);
     const roses = roseRingGeos.map(geo => makeInstanced(geo, bloomMat, nHeads + 2));
-    const petals = makeInstanced(petalGeo, bloomMat, 60);
-    const stamens = makeInstanced(new THREE.CylinderGeometry(0.006, 0.006, 0.16, 4), new THREE.MeshStandardMaterial({ color: 0xd9a441 }), 60);
-    const leaves = makeInstanced(leafGeo, leafMat, 140);
+    const tulips = makeInstanced(tulipGeo, bloomMat, nHeads * 5 + 10);
+    const daisies = makeInstanced(daisyGeo, bloomMat, nHeads * 12 + 24);
+    const daisyEyes = makeInstanced(new THREE.SphereGeometry(0.028, 6, 4), new THREE.MeshStandardMaterial({ color: 0xf0b92a, roughness: 0.6 }), nHeads + 4);
+    const petals = makeInstanced(petalGeo, bloomMat, nHeads * 6 + 12);
+    const stamens = makeInstanced(new THREE.CylinderGeometry(0.006, 0.006, 0.16, 4), new THREE.MeshStandardMaterial({ color: 0xd9a441 }), nHeads * 5 + 10);
+    const leaves = makeInstanced(leafGeo, leafMat, 220);
     const dots = makeInstanced(dotGeo, dotMat, 120);
     const base = new THREE.Vector3(0, mouthY, 0);
     function stem(a, b, r = 0.014) {
@@ -889,16 +895,19 @@ try {
         }
       }
     }
-    // heads: a domed cluster of roses with a few taller lilies
+    // heads: randomly scattered over a rounded dome (no regular pattern): roses, lilies, tulips and daisies mixed together
+    const kinds = ['rose', 'rose', 'rose', 'rose', 'lily', 'lily', 'tulip', 'tulip', 'daisy', 'daisy', 'daisy'];
+    const spread = (big ? 0.74 : 0.55) * sc;
     for (let i = 0; i < nHeads; i++) {
-      const isLily = i % 5 === 3;
-      const a = i * 2.39996, r = Math.sqrt((i + 0.5) / nHeads) * 0.42 * sc;
-      const hgt = (0.34 + 0.3 * Math.sqrt(Math.max(0, 1 - (r / (0.46 * sc)) ** 2))) * sc + (isLily ? 0.28 * sc : 0);
+      const kind = kinds[(rnd() * kinds.length) | 0];
+      const a = rnd() * Math.PI * 2, r = Math.sqrt(rnd()) * spread;
+      const dome = Math.sqrt(Math.max(0, 1 - (r / (spread * 1.12)) ** 2));
+      const hgt = (0.3 + 0.38 * dome) * sc + (rnd() - 0.5) * 0.09 + (kind === 'lily' ? 0.26 * sc : kind === 'tulip' ? 0.12 * sc : kind === 'daisy' ? -0.03 * sc : 0);
       const tip = new THREE.Vector3(Math.cos(a) * r, mouthY + hgt, Math.sin(a) * r);
-      stem(base.clone().add(new THREE.Vector3((rnd() - 0.5) * 0.08, 0, (rnd() - 0.5) * 0.08)), tip);
-      const lean = new THREE.Vector3(Math.cos(a) * 0.5, 1, Math.sin(a) * 0.5).normalize();   // heads tilt outward a little
+      stem(base.clone().add(new THREE.Vector3((rnd() - 0.5) * 0.1, 0, (rnd() - 0.5) * 0.1)), tip);
+      const lean = new THREE.Vector3(Math.cos(a) * (0.35 + rnd() * 0.5) + (rnd() - 0.5) * 0.3, 1, Math.sin(a) * (0.35 + rnd() * 0.5) + (rnd() - 0.5) * 0.3).normalize();
       const headQ = new THREE.Quaternion().setFromUnitVectors(_up, lean);
-      if (isLily) {
+      if (kind === 'lily') {
         for (let k = 0; k < 6; k++) {
           _d.position.copy(tip);
           _d.quaternion.copy(headQ).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.85, (k / 6) * Math.PI * 2, 0, 'YXZ')));
@@ -911,6 +920,21 @@ try {
           _d.quaternion.copy(headQ).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(0.18, ang, 0, 'YXZ')));
           _d.scale.set(1, 1, 1); addInst(stamens, _d);
         }
+      } else if (kind === 'tulip') {
+        const col = TULIP_COLORS[(rnd() * TULIP_COLORS.length) | 0], sz = sc * (0.9 + rnd() * 0.3);
+        for (let k = 0; k < 5; k++) {
+          _d.position.copy(tip);
+          _d.quaternion.copy(headQ).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(0.22, (k / 5) * Math.PI * 2 + rnd() * 0.2, 0, 'YXZ')));
+          _d.scale.setScalar(sz); addInst(tulips, _d, _c.set(col).multiplyScalar(0.9 + rnd() * 0.15).getHex());
+        }
+      } else if (kind === 'daisy') {
+        const sz = sc * (0.8 + rnd() * 0.5);
+        for (let k = 0; k < 12; k++) {
+          _d.position.copy(tip);
+          _d.quaternion.copy(headQ).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.18, (k / 12) * Math.PI * 2, 0, 'YXZ')));
+          _d.scale.setScalar(sz); addInst(daisies, _d, k % 2 ? 0xfffdf5 : 0xf7f3e6);
+        }
+        _d.position.copy(tip).addScaledVector(lean, 0.012); _d.quaternion.identity(); _d.scale.setScalar(sz); addInst(daisyEyes, _d);
       } else {
         const col = ROSE_COLORS[(rnd() * ROSE_COLORS.length) | 0], sz = sc * (0.85 + rnd() * 0.45);
         roseRingGeos.forEach((geo, ri) => {
@@ -931,7 +955,7 @@ try {
         _d.quaternion.identity(); _d.scale.setScalar(0.6 + rnd() * 0.7); addInst(dots, _d);
       }
     }
-    [stems, ...roses, petals, stamens, leaves, dots].forEach(m => g.add(m));
+    [stems, ...roses, petals, stamens, tulips, daisies, daisyEyes, leaves, dots].forEach(m => g.add(m));
     g.position.set(x, y, z);
     scene.add(g);
   }
@@ -1085,23 +1109,15 @@ try {
     const signTex = new THREE.CanvasTexture(signC); signTex.colorSpace = THREE.SRGBColorSpace; signTex.anisotropy = maxAniso;
     fontRedraws.push(() => { drawStairSign(); signTex.needsUpdate = true; });
     const signMat = new THREE.MeshBasicMaterial({ map: signTex, toneMapped: false });
-    const SW = 9.0, SH = 3.4, SY = 11.6, SZ = 42.5;   // big enough to read from across the hall
+    // Fixed flat to the left wall next to the stairs (the free stretch of wall between the last picture and the back wall).
+    const SW = 7.6, SH = SW * 384 / 1024, SY = 8.6, SZ = 45.4;
     const signGroup = new THREE.Group();
-    signGroup.position.set(STAIR_X, SY, SZ);
-    // One board turned 45 deg towards the nave and the altar side, so it reads from the hall and from the front.
-    [Math.PI * 0.75].forEach(rot => {
-      const board = new THREE.Group(); board.rotation.y = rot;
-      const back = new THREE.Mesh(new THREE.BoxGeometry(SW + 0.3, SH + 0.3, 0.14), goldMat); board.add(back);
-      [0.075, -0.075].forEach((dz, i) => {
-        const face = new THREE.Mesh(new THREE.PlaneGeometry(SW, SH), signMat);
-        face.position.z = dz; if (i === 1) face.rotation.y = Math.PI; board.add(face);
-      });
-      signGroup.add(board);
-    });
-    [-1.6, 1.6].forEach(dx => {   // two rods hold it from the ceiling
-      const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, WALL_H - SY - SH / 2, 6), goldMat);
-      rod.position.set(dx, SH / 2 + (WALL_H - SY - SH / 2) / 2, 0); signGroup.add(rod);
-    });
+    signGroup.position.set(-HALF_W + 0.1, SY, SZ);
+    signGroup.rotation.y = Math.PI / 2;                      // faces into the hall
+    const signFrame = new THREE.Mesh(new THREE.BoxGeometry(SW + 0.35, SH + 0.35, 0.12), goldMat);
+    signGroup.add(signFrame);
+    const signFace = new THREE.Mesh(new THREE.PlaneGeometry(SW, SH), signMat);
+    signFace.position.z = 0.07; signGroup.add(signFace);
     scene.add(signGroup);
   }
 
