@@ -1773,7 +1773,7 @@ try {
       f.light.intensity = 1.25 + flicker * 0.55;
     });
     starMat.uniforms.uTime.value = t;
-    if (level !== 'church') statueGroup.rotation.y = Math.atan2(camera.position.x, camera.position.z);   // statue turns to face you
+    if (level !== 'church') statueGroup.rotation.y = Math.atan2(camera.position.x - HUB_CX, camera.position.z - HUB_CZ);   // statue turns to face you (hub is offset from the world origin)
     if (!IS_TOUCH || (++gifSkip % 3 === 0 && level === 'under')) animatedGifTextures.forEach(texture => { texture.needsUpdate = true; });
     stars.rotation.y = Math.sin(t * 0.012) * 0.014;
 
