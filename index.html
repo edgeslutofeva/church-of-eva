@@ -28,7 +28,7 @@
   #vignette {
     position: fixed; inset: 0; z-index: 6; pointer-events: none;
     background:
-      radial-gradient(ellipse at 50% 25%, rgba(255,90,120,.12) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 25%, rgba(255,170,90,.10) 0%, transparent 50%),
       radial-gradient(ellipse at 50% 70%, transparent 40%, rgba(20,8,12,.35) 100%);
   }
   #crosshair {
@@ -130,14 +130,12 @@
   }
   .tbtn:active, .tbtn.on { background: rgba(200,70,90,.6); }
   #btnAct { right: max(22px, env(safe-area-inset-right)); bottom: max(26px, env(safe-area-inset-bottom)); width: 72px; height: 72px; border-radius: 50%; }
-  #btnRun { right: max(110px, calc(env(safe-area-inset-right) + 96px)); bottom: max(34px, env(safe-area-inset-bottom)); }
   #btnMenu { right: max(14px, env(safe-area-inset-right)); top: max(14px, env(safe-area-inset-top)); min-width: 48px; width: 48px; height: 48px; padding: 0; font-size: 20px; letter-spacing: 0; }
   #rotateNote { display: none; }
   @media (orientation: portrait) {
     #stick { width: 120px; height: 120px; bottom: max(40px, env(safe-area-inset-bottom)); }
     #lookZone { left: 0; }
     #btnAct { bottom: max(40px, env(safe-area-inset-bottom)); }
-    #btnRun { bottom: max(48px, env(safe-area-inset-bottom)); }
     html.is-touch.in-game #rotateNote {
       display: block; position: fixed; left: 50%; top: max(14px, env(safe-area-inset-top)); transform: translateX(-50%);
       z-index: 23; pointer-events: none; color: #e8d0c0; font-family: var(--f-book); font-size: 15px; letter-spacing: .04em; text-align: center;
@@ -150,7 +148,6 @@
     #stick { width: 112px; height: 112px; bottom: max(14px, env(safe-area-inset-bottom)); }
     #stickKnob { width: 48px; height: 48px; margin: -24px 0 0 -24px; }
     #btnAct { width: 62px; height: 62px; bottom: max(16px, env(safe-area-inset-bottom)); }
-    #btnRun { bottom: max(22px, env(safe-area-inset-bottom)); height: 48px; min-width: 52px; }
     html.is-touch .card { padding: 22px 18px 14px; }
     html.is-touch .card h1 { font-size: 40px; line-height: 1.6; }
     html.is-touch .card p { margin: 6px 0; }
@@ -173,7 +170,7 @@
 <div id="vignette"></div>
 <div id="loading">PREPARING THE SANCTUARY…</div>
 <div id="crosshair"></div>
-<div id="hint"><b>WASD</b> move · <b>Mouse</b> look · <b>Shift</b> run · <b>E</b> sit · <b>ESC</b> pause · <b>stairs at the rear-left</b> lead to the undercroft</div>
+<div id="hint"><b>WASD</b> move · <b>Mouse</b> look · <b>E</b> sit · <b>ESC</b> pause · <b>stairs at the rear-left</b> lead to the undercroft</div>
 <div id="toast"></div>
 
 <div id="overlay">
@@ -183,7 +180,7 @@
     <p>A quiet sanctuary for reflection.<br>
     Sit in a pew. Walk the aisle.</p>
     <div class="keys desktop-only">
-      <div class="key">W A S D</div><div class="key">Mouse</div><div class="key">Shift</div><div class="key">E / Click</div>
+      <div class="key">W A S D</div><div class="key">Mouse</div><div class="key">E / Click</div>
     </div>
     <p class="tips mobile-only">Left thumb: walk · Drag the right side: look around<br>Round button: sit or stand at a pew<br>Best in landscape</p>
     <div class="enter desktop-only">▶ Click anywhere to enter</div>
@@ -193,7 +190,6 @@
 <div id="touchUI">
   <div id="lookZone"></div>
   <div id="stick"><div id="stickKnob"></div></div>
-  <div class="tbtn" id="btnRun">Run</div>
   <div class="tbtn" id="btnAct">Sit</div>
   <div class="tbtn" id="btnMenu">☰</div>
 </div>
@@ -279,7 +275,7 @@ try {
   renderer.setPixelRatio(Math.min(devicePixelRatio, renderPixelRatio));
   renderer.setSize(innerWidth, innerHeight);
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.55;
+  renderer.toneMappingExposure = 1.08;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.domElement.tabIndex = 0;
   renderer.domElement.style.outline = 'none';
@@ -289,8 +285,8 @@ try {
   loadingEl.style.display = 'none';
 
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x241018);
-  scene.fog = new THREE.FogExp2(0x2a141c, 0.0075);
+  scene.background = new THREE.Color(0x14100c);
+  scene.fog = new THREE.FogExp2(0x1d1611, 0.0062);
 
   const camera = new THREE.PerspectiveCamera(68, innerWidth / innerHeight, 0.2, 300);
   scene.add(camera);
@@ -329,7 +325,7 @@ try {
   }
   function assetTexture(name, u = 1, v = 1, color = true) {
     if (IS_TOUCH && !color) return new THREE.Texture(); // normal/bump maps are disabled on phones
-    const texture = imageLoader.load(mobilePath(`assets/textures/${name}`));
+    const texture = imageLoader.load(mobilePath(`assets/textures/${name}`), t => { try { renderer.initTexture(t); } catch (e) {} });
     texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
     texture.repeat.set(u, v);
     texture.anisotropy = maxAniso;
@@ -350,36 +346,37 @@ try {
   // Materials — bright, textured, like the earlier version
   const goldMat = new THREE.MeshStandardMaterial({ color: 0xe0b84a, metalness: 0.92, roughness: 0.22 });
   const brightGold = new THREE.MeshStandardMaterial({ color: 0xffe090, metalness: 1.0, roughness: 0.14 });
-  const darkStone = new THREE.MeshStandardMaterial({ color: 0x3a242c, metalness: 0.08, roughness: 0.72 });
+  const darkStone = new THREE.MeshStandardMaterial({ color: 0x3b2e24, metalness: 0.08, roughness: 0.74 });
   const woodMat = new THREE.MeshStandardMaterial({
     map: woodTexture,
-    roughness: 0.58, metalness: 0.02, color: 0x79504a
+    roughness: 0.62, metalness: 0.02, color: 0x8a5e3c
   });
   function stoneWallMat(u, v) {
     return new THREE.MeshStandardMaterial({
       map: stoneTexture(u, v),
       normalMap: IS_TOUCH ? null : brickBumpTexture(u, v),
       normalScale: new THREE.Vector2(0.48, 0.48),
-      roughness: 0.88, metalness: 0.0, color: 0x6e4048
+      roughness: 0.92, metalness: 0.0, color: 0x9a8472
     });
   }
   const stoneMat = stoneWallMat(2.6, 4.2);
 
   // Lighting — much brighter
-  scene.add(new THREE.HemisphereLight(0xffb0c0, 0x2a1018, 0.95));
-  scene.add(new THREE.AmbientLight(0xc07080, 0.45));
+  // Even, warm fill so no part of the hall is pitch black, then candle/ceiling lights add the mood.
+  scene.add(new THREE.HemisphereLight(0xffe2c0, 0x3c2f24, IS_TOUCH ? 1.45 : 0.95));
+  scene.add(new THREE.AmbientLight(0xffd6a8, IS_TOUCH ? 0.75 : 0.42));
 
   [-36, -20, -4, 12, 28].forEach(z => {
-    const l = new THREE.PointLight(0xffb070, 70, 48, 1.7);
+    const l = new THREE.PointLight(0xffc690, 85, 54, 1.6);
     l.position.set(0, 11, z);
     scene.add(l);
   });
 
-  const altarLight = new THREE.PointLight(0xff6080, 120, 60, 1.5);
+  const altarLight = new THREE.PointLight(0xffd2a0, 130, 64, 1.4);
   altarLight.position.set(0, 9, FRONT_Z + 5);
   scene.add(altarLight);
 
-  const altarSpot = new THREE.SpotLight(0xff90a8, 160, 70, Math.PI / 3.5, 0.4, 1.1);
+  const altarSpot = new THREE.SpotLight(0xffd8a8, 160, 70, Math.PI / 3.5, 0.4, 1.1);
   altarSpot.position.set(0, 14, FRONT_Z + 14);
   altarSpot.target.position.set(0, 7.5, FRONT_Z + 1);
   if (!IS_TOUCH) { scene.add(altarSpot); scene.add(altarSpot.target); } else { altarLight.intensity *= 1.5; }
@@ -389,7 +386,7 @@ try {
   keyLight.target.position.set(0, 7.5, FRONT_Z + 1);
   if (!IS_TOUCH) { scene.add(keyLight); scene.add(keyLight.target); } else { altarLight.intensity *= 1.3; }
 
-  const rim = new THREE.PointLight(0xc06080, 55, 80, 1.8);
+  const rim = new THREE.PointLight(0xffbe80, 60, 90, 1.6);
   rim.position.set(0, 10, BACK_Z - 8);
   scene.add(rim);
 
@@ -426,7 +423,7 @@ try {
       map: floorTextureShaped,
       normalMap: IS_TOUCH ? null : floorNormalShaped,
       normalScale: new THREE.Vector2(0.35, 0.35),
-      color: 0x805d62, roughness: 0.62
+      color: 0x8b8070, roughness: 0.58
     })
   );
   floor.rotation.x = -Math.PI / 2;
@@ -436,7 +433,7 @@ try {
   // Crimson runner
   const runner = new THREE.Mesh(
     new THREE.PlaneGeometry(4.0, LEN - 12),
-    new THREE.MeshStandardMaterial({ color: 0x8a1428, roughness: 0.82 })
+    new THREE.MeshStandardMaterial({ color: 0x7a1822, roughness: 0.86 })
   );
   runner.rotation.x = -Math.PI / 2;
   runner.position.set(0, 0.03, 0);
@@ -448,8 +445,8 @@ try {
     new THREE.PlaneGeometry(HALF_W * 2 + 8, LEN + 8),
     new THREE.MeshStandardMaterial({
       map: roofTexture,
-      color: 0x3c1f29,
-      roughness: 0.72,
+      color: 0x5c4330,
+      roughness: 0.78,
       metalness: 0.02
     })
   );
@@ -493,7 +490,7 @@ try {
       varying float vTw;
       void main(){
         float a = smoothstep(0.5, 0.0, length(gl_PointCoord - 0.5));
-        gl_FragColor = vec4(1.0, 0.85, 0.9, a * (0.25 + 0.75*vTw));
+        gl_FragColor = vec4(1.0, 0.82, 0.55, a * (0.14 + 0.46*vTw));
       }`
   });
   const stars = new THREE.Points(starGeo, starMat);
@@ -584,6 +581,7 @@ try {
   const sideEndZ = BACK_Z - 18;
   const spacing = (sideEndZ - sideStartZ) / (countPerSide - 1);
   const sideZs = [];
+  const sideHalf = [];
   const leftSideFrames = [];
   const rightSideFrames = [];
   for (let i = 0; i < countPerSide; i++) {
@@ -592,8 +590,10 @@ try {
     const height = isRearFrame ? landscapeFrameH : frameH;
     const y = isRearFrame ? landscapeFrameY : frameY;
     const ratio = isRearFrame ? '16:9' : '9:16';
-    const z = sideStartZ + i * spacing + (isRearFrame ? (landscapeFrameW - frameW) / 2 : 0);
+    // The wide 16:9 rear frame is pushed further back so a column fits cleanly between it and the portrait frame before it.
+    const z = isRearFrame ? sideEndZ + 4.0 : sideStartZ + i * spacing;
     sideZs.push(z);
+    sideHalf.push(width / 2 + 0.28);
     leftSideFrames.push(createFrame(width, height, -HALF_W + 0.24, y, z, Math.PI / 2, ratio).userData.photo);
     rightSideFrames.push(createFrame(width, height, HALF_W - 0.24, y, z, -Math.PI / 2, ratio).userData.photo);
   }
@@ -603,21 +603,23 @@ try {
   const solidObstacles = [];
   function column(x, z) {
     const g = new THREE.Group();
-    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.48, 0.54, WALL_H - 2.4, 14), stoneMat);
-    shaft.position.y = (WALL_H - 2.4) / 2;
+    // Shaft + capital now run all the way up and meet the roof (they used to stop ~2 units short).
+    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.48, 0.54, WALL_H - 0.9, 14), stoneMat);
+    shaft.position.y = (WALL_H - 0.9) / 2;
     g.add(shaft);
-    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.8, 0.8, 14), darkStone);
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.68, 0.8, 14), darkStone);   // slimmer base: fits the gap between two frames
     base.position.y = 0.4;
     g.add(base);
-    const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.74, 0.5, 0.9, 14), goldMat);
-    cap.position.y = WALL_H - 2.3;
+    const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.66, 0.5, 0.9, 14), goldMat);
+    cap.position.y = WALL_H - 0.43;   // top of the capital sits 2 cm inside the ceiling
     g.add(cap);
     g.position.set(x, 0, z);
     scene.add(g);
     solidObstacles.push({ x, z, radius: 0.95 });
   }
   for (let i = 0; i < sideZs.length - 1; i++) {
-    const midZ = (sideZs[i] + sideZs[i + 1]) / 2;
+    // centre of the free gap between the edge of one frame (incl. its gold border) and the next
+    const midZ = ((sideZs[i] + sideHalf[i]) + (sideZs[i + 1] - sideHalf[i + 1])) / 2;
     column(-HALF_W + 1.3, midZ);
     column(HALF_W - 1.3, midZ);
   }
@@ -685,6 +687,7 @@ try {
       }
       texture.colorSpace = THREE.SRGBColorSpace;
       texture.anisotropy = maxAniso;
+      try { renderer.initTexture(texture); } catch (e) {}   // pre-upload so the first look at it doesn't stall
       const previousMaterial = photo.material;
       previousMaterial.map?.dispose();
       previousMaterial.dispose();
@@ -897,25 +900,27 @@ try {
   const undercroft = new THREE.Group();
   scene.add(undercroft);
   const ugLights = [];
-  const roomLights = [];
+  const roomLights = [];   // data only: { x, z, pos, color }
+  const ROOM_POOL = IS_TOUCH ? 1 : 2;
+  const roomPool = [];
 
   const ugWallMat = new THREE.MeshStandardMaterial({
     map: stoneTexture(4, 1.6),
     normalMap: IS_TOUCH ? null : brickBumpTexture(4, 1.6),
     normalScale: new THREE.Vector2(0.4, 0.4),
-    color: 0x5f383f, roughness: 0.92, side: THREE.DoubleSide
+    color: 0x93806c, roughness: 0.92, side: THREE.DoubleSide
   });
   const ugFloorMat = new THREE.MeshStandardMaterial({
     map: assetTexture('FloorsCheckerboard_S_Diffuse.jpg', 6, 6),
     normalMap: IS_TOUCH ? null : assetTexture('FloorsCheckerboard_S_Normal.jpg', 6, 6, false),
     normalScale: new THREE.Vector2(0.3, 0.3),
-    color: 0x76565a, roughness: 0.72, side: THREE.DoubleSide
+    color: 0x867a68, roughness: 0.62, side: THREE.DoubleSide
   });
   // DoubleSide so ceilings read from below no matter which way they were built.
   const undercroftRoofTexture = assetTexture('hardwood2_diffuse.jpg', 5, 8);
   const ugCeilMat = new THREE.MeshStandardMaterial({
     map: undercroftRoofTexture,
-    color: 0x3c1f29,
+    color: 0x5a4230,
     roughness: 0.72,
     metalness: 0.02,
     side: THREE.DoubleSide
@@ -1077,20 +1082,23 @@ try {
     }
   });
 
+  // solid things in the hub the player must not walk through (pillars + the central stage)
+  const hubSolids = [{ x: HUB_CX, z: HUB_CZ, r: 6.4 + 0.6 }];
   // ring of pillars
   // Pillars sit midway between doorways (doors are at 18° + 36°·k), so they never
   // stand in the line of sight from the hub into a corridor. Angle 0 is the stair mouth.
   for (let i = 1; i < ROOM_COUNT; i++) {
     const a = (i / ROOM_COUNT) * Math.PI * 2;
     const g = new THREE.Group();
-    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.7, UG_CEIL - 1.6, 12), ugWallMat);
-    shaft.position.y = (UG_CEIL - 1.6) / 2;
+    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.7, UG_CEIL - 0.7, 12), ugWallMat);
+    shaft.position.y = (UG_CEIL - 0.7) / 2;
     g.add(shaft);
     const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.66, 0.8, 12), goldMat);
-    cap.position.y = UG_CEIL - 1.5;
+    cap.position.y = UG_CEIL - 0.38;   // flush with the hub ceiling
     g.add(cap);
     g.position.set(Math.sin(a) * 21, UG_Y, Math.cos(a) * 21);
     hub.add(g);
+    hubSolids.push({ x: HUB_CX + Math.sin(a) * 21, z: HUB_CZ + Math.cos(a) * 21, r: 0.9 + 0.55 });
   }
 
   const plinth = new THREE.Mesh(new THREE.CylinderGeometry(5.4, 6.4, 1.4, 16), ugWallMat);
@@ -1118,8 +1126,45 @@ try {
   statueGroup.add(halo);
   const statueTex = imageLoader.load(mobilePath('assets/statue/statue.webp'));
   statueTex.colorSpace = THREE.SRGBColorSpace; statueTex.anisotropy = maxAniso;
-  const statue = new THREE.Mesh(new THREE.PlaneGeometry(STATUE_W, STATUE_H), new THREE.MeshBasicMaterial({
-    map: statueTex, transparent: true, alphaTest: 0.04, toneMapped: false, side: THREE.DoubleSide }));
+  // Fake depth: the flat picture is pushed out into a rounded relief using a depth map, and shaded from the
+  // depth slope, so as you walk round her the body reads as a volume rather than a flat cut-out.
+  const depthTex = imageLoader.load(mobilePath('assets/statue/depth.png'));
+  const statueMat = new THREE.ShaderMaterial({
+    transparent: true, side: THREE.DoubleSide,
+    uniforms: {
+      map: { value: statueTex }, depthMap: { value: depthTex },
+      depthScale: { value: 0.75 }, texel: { value: new THREE.Vector2(1 / 227, 1 / 566) },
+      size: { value: new THREE.Vector2(STATUE_W, STATUE_H) }
+    },
+    vertexShader: `
+      uniform sampler2D depthMap; uniform float depthScale; uniform vec2 texel; uniform vec2 size;
+      varying vec2 vUv; varying vec3 vN;
+      float dp(vec2 uv) { return texture2D(depthMap, uv).r; }
+      void main() {
+        vUv = uv;
+        vec3 p = position;
+        p.z += dp(uv) * depthScale;
+        vec2 e = texel * 3.0;
+        float dx = dp(uv + vec2(e.x, 0.0)) - dp(uv - vec2(e.x, 0.0));
+        float dy = dp(uv + vec2(0.0, e.y)) - dp(uv - vec2(0.0, e.y));
+        vec2 slope = vec2(dx, dy) * depthScale / (2.0 * e * size);
+        vN = normalize(vec3(-slope.x, -slope.y, 1.0));
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+      }`,
+    fragmentShader: `
+      uniform sampler2D map; varying vec2 vUv; varying vec3 vN;
+      void main() {
+        vec4 c = texture2D(map, vUv);
+        if (c.a < 0.04) discard;
+        vec3 n = normalize(vN);
+        float key = clamp(dot(n, normalize(vec3(-0.45, 0.5, 0.75))), 0.0, 1.0);
+        float rim = pow(1.0 - clamp(n.z, 0.0, 1.0), 2.0);
+        vec3 col = c.rgb * (0.66 + 0.5 * key) + vec3(1.0, 0.72, 0.42) * rim * 0.28;
+        if (!gl_FrontFacing) col *= 0.4;
+        gl_FragColor = linearToOutputTexel(vec4(col, c.a));
+      }`
+  });
+  const statue = new THREE.Mesh(new THREE.PlaneGeometry(STATUE_W, STATUE_H, 90, 224), statueMat);
   statue.position.y = STATUE_H / 2;
   statue.renderOrder = 6;
   statueGroup.add(statue);
@@ -1130,14 +1175,14 @@ try {
   statueGroup.add(glowRing);
   hub.add(statueGroup);
 
-  const hubLightA = new THREE.PointLight(0xffb070, 90, 90, 1.6);
+  const hubLightA = new THREE.PointLight(0xffc690, 105, 95, 1.5);
   hubLightA.position.set(0, UG_Y + UG_CEIL - 2, 0);
   hub.add(hubLightA); ugLights.push(hubLightA);
-  const hubLightB = new THREE.PointLight(0xff7090, 55, 70, 1.7);
+  const hubLightB = new THREE.PointLight(0xffb878, 70, 75, 1.6);
   hubLightB.position.set(0, UG_Y + 4, 0);
   hub.add(hubLightB); ugLights.push(hubLightB);
   // a lamp at the foot of the stair so the descent is never pitch dark
-  const stairLight = new THREE.PointLight(0xffc090, 45, 40, 1.7);
+  const stairLight = new THREE.PointLight(0xffc690, 70, 46, 1.5);
   stairLight.position.set(STAIR_X, UG_Y + 6, STAIR_BOT_Z + 2);
   undercroft.add(stairLight); ugLights.push(stairLight);
 
@@ -1322,11 +1367,8 @@ try {
     // This makes every plate readable before entering its corridor.
     roomPlaque(room, CHAMBER_NAMES[k], 0, CORRIDOR_H + 1.5, HUB_R - 0.55, Math.PI);
 
-    const rl = new THREE.PointLight(ROOM_TINTS[k], 70, 62, 1.7);
-    rl.position.set(0, UG_CEIL - 2.5, rc);
-    room.add(rl);
     roomLights.push({
-      light: rl,
+      color: new THREE.Color(ROOM_TINTS[k]).lerp(new THREE.Color(0xffc690), 0.55),   // keep each room's tint, but warmer
       x: HUB_CX + Math.sin(theta) * rc,
       z: HUB_CZ + Math.cos(theta) * rc
     });
@@ -1340,6 +1382,7 @@ try {
 
   function undergroundWalkable(x, z) {
     const lx = x - HUB_CX, lz = z - HUB_CZ;
+    for (const o of hubSolids) { const dx = x - o.x, dz = z - o.z; if (dx * dx + dz * dz < o.r * o.r) return false; }
     if (Math.hypot(lx, lz) < HUB_R - 1.4) return true;
     for (let k = 0; k < ROOM_COUNT; k++) {
       const th = ROOM_OFFSET + (k / ROOM_COUNT) * Math.PI * 2;
@@ -1366,16 +1409,23 @@ try {
     if (next === 'under') toast('The undercroft · ten chambers');
     if (next === 'church') toast('The sanctuary');
   }
+  for (let i = 0; i < ROOM_POOL; i++) {
+    const pl = new THREE.PointLight(0xffc690, 0, 62, 1.6);
+    pl.position.set(0, UG_Y + UG_CEIL - 2.5, 0);
+    undercroft.add(pl); roomPool.push(pl); ugLights.push(pl);
+  }
   ugLights.forEach(l => { l.visible = false; });
-  roomLights.forEach(({ light }) => { light.visible = false; });
   hub.visible = false;
 
   function updateRoomLights(x, z) {
-    const activeRadiusSq = 38 * 38;
-    roomLights.forEach(({ light, x: roomX, z: roomZ }) => {
-      const dx = x - roomX;
-      const dz = z - roomZ;
-      light.visible = level === 'under' && dx * dx + dz * dz < activeRadiusSq;
+    // The light COUNT never changes (changing it forces every material to recompile = a freeze).
+    // Instead the pooled lights are re-aimed at the nearest rooms, and faded out when none is close.
+    const near = roomLights.map(r => ({ r, d: (x - r.x) * (x - r.x) + (z - r.z) * (z - r.z) })).sort((a, b) => a.d - b.d);
+    roomPool.forEach((pl, i) => {
+      const n = near[i];
+      if (n && level !== 'church' && n.d < 46 * 46) {
+        pl.position.set(n.r.x, UG_Y + UG_CEIL - 2.5, n.r.z); pl.color.copy(n.r.color); pl.intensity = 80;
+      } else pl.intensity = 0;
     });
   }
 
@@ -1530,12 +1580,10 @@ try {
     const stick = document.getElementById('stick');
     const knob = document.getElementById('stickKnob');
     const lookZone = document.getElementById('lookZone');
-    const runBtn = document.getElementById('btnRun');
     const menuBtn = document.getElementById('btnMenu');
     const LOOK_SENS = 0.0042;
     let stickId = null, stickCx = 0, stickCy = 0, stickR = 1;
     let lookId = null, lookX = 0, lookY = 0;
-    let runLatched = false;
 
     function applyLook(dx, dy) {
       if (sitting) {
@@ -1588,14 +1636,11 @@ try {
       move.mag = Math.min(1, (mag - dead) / (1 - dead));
       move.f = ny < 0 ? -ny : 0; move.b = ny > 0 ? ny : 0;
       move.r = nx > 0 ? nx : 0; move.l = nx < 0 ? -nx : 0;
-      // Pushing the stick nearly all the way auto-runs
-      move.run = runLatched || mag > 0.97;
     }
     function resetStick() {
       stickId = null;
       knob.style.transform = '';
       move.f = move.b = move.l = move.r = 0; move.mag = 0; move.analog = false;
-      move.run = runLatched;
     }
     stick.addEventListener('touchstart', e => {
       e.preventDefault();
@@ -1621,11 +1666,6 @@ try {
       el.addEventListener('touchend', e => { e.preventDefault(); e.stopPropagation(); fn(); }, { passive: false });
     }
     tap(actBtn, () => { if (sitting) standUp(); else tryInteract(); });
-    tap(runBtn, () => {
-      runLatched = !runLatched;
-      runBtn.classList.toggle('on', runLatched);
-      move.run = runLatched;
-    });
     tap(menuBtn, () => {
       // Pause: bring back the intro card; tapping it resumes.
       resetStick(); lookId = null;
@@ -1715,7 +1755,7 @@ try {
     }
 
     if (navigationActive && !sitting) {
-      const speed = move.run ? 96 : 52;
+      const speed = 96;   // one constant speed (formerly the 'run' speed); there is no separate run any more
       velocity.x -= velocity.x * 9 * dt;
       velocity.z -= velocity.z * 9 * dt;
       direction.z = move.f - move.b;
@@ -1773,7 +1813,10 @@ try {
       f.light.intensity = 1.25 + flicker * 0.55;
     });
     starMat.uniforms.uTime.value = t;
-    if (level !== 'church') statueGroup.rotation.y = Math.atan2(camera.position.x - HUB_CX, camera.position.z - HUB_CZ);   // statue turns to face you (hub is offset from the world origin)
+    if (level !== 'church') { const ang = Math.atan2(camera.position.x - HUB_CX, camera.position.z - HUB_CZ);   // hub is offset from the world origin
+      // Faces you, but keeps up to ~23 deg of turn when you are beside her (and none when directly in front/behind),
+      // so the depth relief shows as you walk around without ever turning edge-on.
+      statueGroup.rotation.y = ang - 0.4 * Math.sin(ang); }
     if (!IS_TOUCH || (++gifSkip % 3 === 0 && level === 'under')) animatedGifTextures.forEach(texture => { texture.needsUpdate = true; });
     stars.rotation.y = Math.sin(t * 0.012) * 0.014;
 
@@ -1792,13 +1835,11 @@ try {
     const savedChurch = churchLights.map(l => l.visible);
     hub.visible = true;
     ugLights.forEach(l => { l.visible = true; });
-    renderer.compile(scene, camera);
+    renderer.compile(scene, camera);           // the 'stair' configuration (church lights + underground lights)
     churchLights.forEach(l => { l.visible = false; });
-    roomLights.forEach(({ light }) => { light.visible = true; });
-    renderer.compile(scene, camera);
+    renderer.compile(scene, camera);           // the 'under' configuration (underground lights only)
     hub.visible = false;
     ugLights.forEach(l => { l.visible = false; });
-    roomLights.forEach(({ light }) => { light.visible = false; });
     churchLights.forEach((l, i) => { l.visible = savedChurch[i]; });
   } catch (e) { console.warn('prewarm skipped', e); }
 
