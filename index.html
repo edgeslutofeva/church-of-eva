@@ -625,9 +625,10 @@ try {
   }
 
   // Back wall frames
-  const backLeftFrame = createFrame(4.2, 7.5, -6.5, 5.85, BACK_Z - 0.35, Math.PI, '9:16');
-  const backCenterFrame = createFrame(4.2, 7.5, 0, 5.85, BACK_Z - 0.35, Math.PI, '9:16');
-  const backRightFrame = createFrame(4.2, 7.5, 6.5, 5.85, BACK_Z - 0.35, Math.PI, '9:16');
+  // Back wall (behind where you spawn): much larger pictures, 7 x 12.4 instead of 4.2 x 7.5.
+  const backLeftFrame = createFrame(7.0, 12.4, -9.4, 8.7, BACK_Z - 0.35, Math.PI, '9:16');
+  const backCenterFrame = createFrame(7.0, 12.4, 0, 8.7, BACK_Z - 0.35, Math.PI, '9:16');
+  const backRightFrame = createFrame(7.0, 12.4, 9.4, 8.7, BACK_Z - 0.35, Math.PI, '9:16');
 
   // Side videos: left wall runs front-to-back, right wall runs back-to-front.
   const panelVideoSources = ["videos/1.mp4","videos/2.mp4","videos/5.mp4","videos/6.mp4","videos/7.mp4","videos/8.mp4","videos/9.mp4","videos/10.mp4","videos/11.mp4","videos/12.mp4","videos/13.mp4","videos/3.mp4","videos/4.mp4","videos/14.mp4","videos/15.mp4","videos/16.mp4","videos/17.mp4","videos/18.mp4","videos/19.mp4","videos/20.mp4","videos/21.mp4","videos/22.mp4","videos/23.mp4","videos/24.mp4"];
@@ -824,38 +825,113 @@ try {
     createCandle(2.1, 0, z, 0.88);
   }
 
-  // Flowers
-  const FLOWER_COLORS = [0xc41e3a, 0xff5c5c, 0xff8a8a, 0xffd700, 0xff4d6d];
-  function makeBloom(color, scale = 1) {
-    const g = new THREE.Group();
-    const petalMat = new THREE.MeshStandardMaterial({ color, roughness: 0.5 });
-    for (let i = 0; i < 6; i++) {
-      const petal = new THREE.Mesh(new THREE.SphereGeometry(0.14, 7, 7), petalMat);
-      petal.scale.set(0.45, 0.22, 0.9);
-      const a = (i / 6) * Math.PI * 2;
-      petal.position.set(Math.cos(a) * 0.12, 0, Math.sin(a) * 0.12);
-      petal.rotation.y = a;
-      g.add(petal);
-    }
-    g.add(new THREE.Mesh(new THREE.SphereGeometry(0.07, 7, 7), brightGold));
-    g.scale.setScalar(scale);
-    return g;
+  // Flowers: roses, lilies, eucalyptus and baby's breath in an urn. Everything of one kind is drawn as ONE instanced
+  // mesh per vase, so four big arrangements cost only a few dozen draw calls (important on phones).
+  const ROSE_COLORS = [0x8e1530, 0xb3203a, 0xe9b9b2, 0xf4ead8, 0xe99a86, 0xa31a35];
+  const LEAF_COLORS = [0x5d7a5b, 0x7b937a, 0x4a6a4d, 0x8aa388];
+  const _d = new THREE.Object3D(), _q = new THREE.Quaternion(), _up = new THREE.Vector3(0, 1, 0), _c = new THREE.Color();
+  const roseRingGeos = [[0.15, 0], [0.115, 0.022], [0.082, 0.044], [0.052, 0.062]].map(([r, dy]) => {
+    const geo = new THREE.SphereGeometry(r, 9, 4, 0, Math.PI * 2, 0, Math.PI * 0.5); geo.rotateX(Math.PI); geo.userData = { dy }; return geo;
+  });
+  const petalGeo = (() => { const g = new THREE.SphereGeometry(1, 6, 4); g.scale(0.05, 0.013, 0.24); g.translate(0, 0, 0.2); return g; })();
+  const leafGeo = (() => { const g = new THREE.SphereGeometry(1, 6, 4); g.scale(0.085, 0.012, 0.15); g.translate(0, 0, 0.1); return g; })();
+  const dotGeo = new THREE.SphereGeometry(0.03, 5, 4);
+  const stemGeo = new THREE.CylinderGeometry(1, 1, 1, 5);
+  const stemMat = new THREE.MeshStandardMaterial({ color: 0x3f5a36, roughness: 0.85 });
+  const bloomMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.55, side: THREE.DoubleSide });
+  const leafMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.7, side: THREE.DoubleSide });
+  const dotMat = new THREE.MeshStandardMaterial({ color: 0xf8f2e6, roughness: 0.6 });
+  function makeInstanced(geo, mat, count) {
+    const m = new THREE.InstancedMesh(geo, mat, count);
+    m.frustumCulled = false; m.count = 0; return m;
+  }
+  function addInst(m, obj, color) {
+    obj.updateMatrix(); m.setMatrixAt(m.count, obj.matrix);
+    if (color !== undefined) m.setColorAt(m.count, _c.set(color));
+    m.count++; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true;
   }
   function flowerVase(x, y, z, big = false) {
     const g = new THREE.Group();
-    const vase = new THREE.Mesh(
-      new THREE.CylinderGeometry(big ? 0.34 : 0.26, big ? 0.26 : 0.2, big ? 1.1 : 0.85, 10),
-      goldMat
-    );
-    vase.position.y = big ? 0.55 : 0.42;
+    const sc = big ? 1.0 : 0.78;
+    // urn
+    const prof = [[0.17, 0], [0.30, 0.1], [0.34, 0.42], [0.23, 0.78], [0.17, 0.9], [0.27, 1.04], [0.25, 1.1]].map(([r, h]) => new THREE.Vector2(r * sc, h * sc));
+    const vase = new THREE.Mesh(new THREE.LatheGeometry(prof, 14), goldMat);
     g.add(vase);
-    for (let i = 0; i < (big ? 11 : 8); i++) {
-      const bloom = makeBloom(FLOWER_COLORS[i % FLOWER_COLORS.length], big ? 0.95 : 0.8);
-      const a = Math.random() * Math.PI * 2;
-      const r = Math.random() * (big ? 0.28 : 0.2);
-      bloom.position.set(Math.cos(a) * r, (big ? 1.25 : 1.0) + Math.random() * 0.2, Math.sin(a) * r);
-      g.add(bloom);
+    const mouthY = 1.08 * sc;
+    const rnd = (() => { let t = (Math.round(x * 100) + 7919 * Math.round(z * 100)) >>> 0; return () => ((t = (t * 1664525 + 1013904223) >>> 0) / 4294967296); })();
+    const nHeads = (big ? 13 : 8) - (IS_TOUCH ? 3 : 0);
+    const stems = makeInstanced(stemGeo, stemMat, 80);
+    const roses = roseRingGeos.map(geo => makeInstanced(geo, bloomMat, nHeads + 2));
+    const petals = makeInstanced(petalGeo, bloomMat, 60);
+    const stamens = makeInstanced(new THREE.CylinderGeometry(0.006, 0.006, 0.16, 4), new THREE.MeshStandardMaterial({ color: 0xd9a441 }), 60);
+    const leaves = makeInstanced(leafGeo, leafMat, 140);
+    const dots = makeInstanced(dotGeo, dotMat, 120);
+    const base = new THREE.Vector3(0, mouthY, 0);
+    function stem(a, b, r = 0.014) {
+      const dir = new THREE.Vector3().subVectors(b, a), len = dir.length();
+      _d.position.copy(a).addScaledVector(dir, 0.5); _d.quaternion.setFromUnitVectors(_up, dir.normalize()); _d.scale.set(r, len, r);
+      addInst(stems, _d);
     }
+    // leafy eucalyptus sprays around the edge first (they form the frame of the arrangement)
+    const nSprays = big ? 9 : 6;
+    for (let i = 0; i < nSprays; i++) {
+      const a = (i / nSprays) * Math.PI * 2 + rnd() * 0.4, out = 0.5 + rnd() * 0.3, h = 0.25 + rnd() * 0.45;
+      const tip = new THREE.Vector3(Math.cos(a) * out * sc, mouthY + h * sc, Math.sin(a) * out * sc);
+      stem(base, tip, 0.012);
+      const dir = new THREE.Vector3().subVectors(tip, base);
+      for (let k = 1; k <= 7; k++) {
+        const t = k / 7, pt = base.clone().addScaledVector(dir, t);
+        for (const side of [-1, 1]) {
+          _d.position.copy(pt); _d.scale.setScalar(0.9 + rnd() * 0.5);
+          _q.setFromUnitVectors(_up, dir.clone().normalize());
+          _d.quaternion.copy(_q).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.5, a + side * 1.2 + rnd() * 0.4, 0, 'YXZ')));
+          addInst(leaves, _d, LEAF_COLORS[(rnd() * LEAF_COLORS.length) | 0]);
+        }
+      }
+    }
+    // heads: a domed cluster of roses with a few taller lilies
+    for (let i = 0; i < nHeads; i++) {
+      const isLily = i % 5 === 3;
+      const a = i * 2.39996, r = Math.sqrt((i + 0.5) / nHeads) * 0.42 * sc;
+      const hgt = (0.34 + 0.3 * Math.sqrt(Math.max(0, 1 - (r / (0.46 * sc)) ** 2))) * sc + (isLily ? 0.28 * sc : 0);
+      const tip = new THREE.Vector3(Math.cos(a) * r, mouthY + hgt, Math.sin(a) * r);
+      stem(base.clone().add(new THREE.Vector3((rnd() - 0.5) * 0.08, 0, (rnd() - 0.5) * 0.08)), tip);
+      const lean = new THREE.Vector3(Math.cos(a) * 0.5, 1, Math.sin(a) * 0.5).normalize();   // heads tilt outward a little
+      const headQ = new THREE.Quaternion().setFromUnitVectors(_up, lean);
+      if (isLily) {
+        for (let k = 0; k < 6; k++) {
+          _d.position.copy(tip);
+          _d.quaternion.copy(headQ).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.85, (k / 6) * Math.PI * 2, 0, 'YXZ')));
+          _d.scale.setScalar(sc * (0.85 + rnd() * 0.15));
+          addInst(petals, _d, k % 2 ? 0xf6efe0 : 0xf1e4d0);
+        }
+        for (let k = 0; k < 5; k++) {
+          const ang = (k / 5) * Math.PI * 2;
+          _d.position.copy(tip).add(new THREE.Vector3(Math.cos(ang) * 0.035, 0.07, Math.sin(ang) * 0.035).applyQuaternion(headQ));
+          _d.quaternion.copy(headQ).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(0.18, ang, 0, 'YXZ')));
+          _d.scale.set(1, 1, 1); addInst(stamens, _d);
+        }
+      } else {
+        const col = ROSE_COLORS[(rnd() * ROSE_COLORS.length) | 0], sz = sc * (0.85 + rnd() * 0.45);
+        roseRingGeos.forEach((geo, ri) => {
+          _d.position.copy(tip).addScaledVector(lean, geo.userData.dy * sz);
+          _d.quaternion.copy(headQ).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler((rnd() - 0.5) * 0.25, rnd() * 6.28, (rnd() - 0.5) * 0.25, 'YXZ')));
+          _d.scale.setScalar(sz);
+          addInst(roses[ri], _d, _c.set(col).multiplyScalar(1 - ri * 0.13).getHex());
+        });
+      }
+    }
+    // baby's-breath sprinkled through the gaps
+    for (let i = 0; i < (big ? 7 : 5); i++) {
+      const a = rnd() * Math.PI * 2, r = (0.12 + rnd() * 0.4) * sc, h = (0.5 + rnd() * 0.25) * sc;
+      const c0 = new THREE.Vector3(Math.cos(a) * r, mouthY + h, Math.sin(a) * r);
+      stem(base, c0, 0.008);
+      for (let k = 0; k < 14; k++) {
+        _d.position.set(c0.x + (rnd() - 0.5) * 0.22, c0.y + rnd() * 0.12, c0.z + (rnd() - 0.5) * 0.22);
+        _d.quaternion.identity(); _d.scale.setScalar(0.6 + rnd() * 0.7); addInst(dots, _d);
+      }
+    }
+    [stems, ...roses, petals, stamens, leaves, dots].forEach(m => g.add(m));
     g.position.set(x, y, z);
     scene.add(g);
   }
@@ -863,6 +939,7 @@ try {
   flowerVase(2.5, altarSurfaceY, FRONT_Z + 4.3, true);
   flowerVase(-8.2, 0, FRONT_Z + 12);
   flowerVase(8.2, 0, FRONT_Z + 12);
+  solidObstacles.push({ x: -8.2, z: FRONT_Z + 12, radius: 0.7 }, { x: 8.2, z: FRONT_Z + 12, radius: 0.7 });
 
   // ═════════════ THE UNDERCROFT — stair, hub, and ten chambers ═════════════
   // Nothing above ground is altered; this hangs entirely below y = 0.
@@ -980,6 +1057,53 @@ try {
   const curbEnd = new THREE.Mesh(new THREE.BoxGeometry(STAIR_HALF * 2 + 1.0, 1.15, 0.45), curbMatUG);
   curbEnd.position.set(STAIR_X, 0.55, SHAFT_Z0 - 0.2);
   scene.add(curbEnd);
+
+  // ——— Sign above the stairs: tells visitors where the way down is (readable from the hall and from the back) ———
+  {
+    const signC = document.createElement('canvas'); signC.width = 1024; signC.height = 384;
+    const sg = signC.getContext('2d');
+    const arrow = (cx) => {
+      sg.fillStyle = '#e0b84a'; sg.beginPath();
+      sg.moveTo(cx - 20, 84); sg.lineTo(cx + 20, 84); sg.lineTo(cx + 20, 236); sg.lineTo(cx + 52, 236);
+      sg.lineTo(cx, 308); sg.lineTo(cx - 52, 236); sg.lineTo(cx - 20, 236); sg.closePath(); sg.fill();
+    };
+    function drawStairSign() {
+      sg.setTransform(1, 0, 0, 1, 0, 0);
+      sg.fillStyle = '#1a0c10'; sg.fillRect(0, 0, 1024, 384);
+      sg.strokeStyle = '#e0b84a'; sg.lineWidth = 10; sg.strokeRect(14, 14, 996, 356);
+      sg.strokeStyle = 'rgba(224,184,74,.45)'; sg.lineWidth = 3; sg.strokeRect(30, 30, 964, 324);
+      arrow(118); arrow(906);
+      sg.textAlign = 'center'; sg.textBaseline = 'alphabetic';
+      sg.fillStyle = '#FFE0F6'; sg.font = '112px "EDV Advantage", "Brush Script MT", cursive';
+      sg.fillText('The Undercroft', 512, 178);
+      sg.fillStyle = '#EBC9CB'; sg.font = '44px "EDV Raygun", Impact, sans-serif';
+      sg.fillText('STAIRS DOWN', 512, 270);
+      sg.fillStyle = '#d9b8aa'; sg.font = '30px "EDV Gotham Condensed Medium", "Arial Narrow", sans-serif';
+      sg.fillText('TEN CHAMBERS BELOW', 512, 324);
+    }
+    drawStairSign();
+    const signTex = new THREE.CanvasTexture(signC); signTex.colorSpace = THREE.SRGBColorSpace; signTex.anisotropy = maxAniso;
+    fontRedraws.push(() => { drawStairSign(); signTex.needsUpdate = true; });
+    const signMat = new THREE.MeshBasicMaterial({ map: signTex, toneMapped: false });
+    const SW = 9.0, SH = 3.4, SY = 11.6, SZ = 42.5;   // big enough to read from across the hall
+    const signGroup = new THREE.Group();
+    signGroup.position.set(STAIR_X, SY, SZ);
+    // One board turned 45 deg towards the nave and the altar side, so it reads from the hall and from the front.
+    [Math.PI * 0.75].forEach(rot => {
+      const board = new THREE.Group(); board.rotation.y = rot;
+      const back = new THREE.Mesh(new THREE.BoxGeometry(SW + 0.3, SH + 0.3, 0.14), goldMat); board.add(back);
+      [0.075, -0.075].forEach((dz, i) => {
+        const face = new THREE.Mesh(new THREE.PlaneGeometry(SW, SH), signMat);
+        face.position.z = dz; if (i === 1) face.rotation.y = Math.PI; board.add(face);
+      });
+      signGroup.add(board);
+    });
+    [-1.6, 1.6].forEach(dx => {   // two rods hold it from the ceiling
+      const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, WALL_H - SY - SH / 2, 6), goldMat);
+      rod.position.set(dx, SH / 2 + (WALL_H - SY - SH / 2) / 2, 0); signGroup.add(rod);
+    });
+    scene.add(signGroup);
+  }
 
   // ——— the hub ———
   const hub = new THREE.Group();
@@ -1732,9 +1856,20 @@ try {
       const previousX = p.x;
       const previousZ = p.z;
       controls.moveRight(-velocity.x * dt);
-      if (blockedByArchitecture(p.x, p.z)) p.x = previousX;
       controls.moveForward(-velocity.z * dt);
-      if (blockedByArchitecture(p.x, p.z)) p.z = previousZ;
+      {
+        // Work out where the player wants to go, put them back, then try X and Z one at a time.
+        // (The old code undid only one axis after each sub-move, which left the player inside the column/pew
+        // and let them walk through it.) Doing it per axis also makes you slide along walls instead of sticking.
+        const nx = p.x, nz = p.z;
+        p.x = previousX; p.z = previousZ;
+        const ok = (x, z) => level === 'church' ? !blockedByArchitecture(x, z) : level === 'under' ? undergroundWalkable(x, z) : true;
+        if (!ok(previousX, previousZ)) { p.x = nx; p.z = nz; }          // already inside something: let them walk out
+        else {
+          if (ok(nx, previousZ)) p.x = nx;
+          if (ok(p.x, nz)) p.z = nz;
+        }
+      }
       if (level === 'church') {
         p.x = THREE.MathUtils.clamp(p.x, -HALF_W + 1.5, HALF_W - 1.5);
         p.z = THREE.MathUtils.clamp(p.z, FRONT_Z + 4.5, BACK_Z - 3);
