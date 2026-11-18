@@ -789,8 +789,8 @@ try {
   // the carpet. They sit in the gaps between the side pews, so nothing overlaps the existing ones.
   for (let i = 0; i < 5; i++) {
     const z = sideZs[i] + (sideZs[1] - sideZs[0]) / 2;
-    makePew(-6.1, z, Math.PI, 0, 6.4);
-    makePew(6.1, z, Math.PI, 0, 6.4);
+    makePew(-4.8, z, Math.PI, 0, 3.8);   // shorter than before (was 6.4 long), tucked against the carpet side
+    makePew(4.8, z, Math.PI, 0, 3.8);
   }
   // Candles
   const flameLights = [];
